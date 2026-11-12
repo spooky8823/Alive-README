@@ -2,3 +2,7 @@ name = "alive-readme-buttons"
 main = "src/index.js"
 compatibility_date = "2026-10-01"
 workers_dev = true
+
+[[kv_namespaces]]
+binding = "VIEWS"
+id = "871de8949df847d5b894bc386f08d554"
