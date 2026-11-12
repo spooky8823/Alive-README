@@ -32,9 +32,13 @@ details{margin-top:12px}summary{cursor:pointer;color:var(--mu);font-size:.85rem}
 .note{font-size:.8rem;color:var(--mu);margin:6px 0 0}.note a{color:var(--ac)}
 #warn{display:none;border:1px solid #e0a030;border-radius:8px;padding:8px 12px;margin-top:10px;font-size:.85rem}
 :focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+[hidden]{display:none!important}
+.tabs{display:flex;gap:8px;margin:0 0 18px}.tab-btn{border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:9px;padding:9px 16px;font:inherit;cursor:pointer}.tab-btn[aria-selected=true]{background:var(--ac);border-color:var(--ac);color:#fff}.analytics-note{font-size:.82rem;color:var(--mu);margin:-6px 0 18px}.analytics-note button{background:none;border:0;color:var(--ac);text-decoration:underline;cursor:pointer;font:inherit}.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.stat-total{font-size:2.2rem;font-weight:750}.stat-table{width:100%;border-collapse:collapse}.stat-table th,.stat-table td{text-align:left;padding:9px 6px;border-bottom:1px solid var(--bd)}.stat-table th:last-child,.stat-table td:last-child{text-align:right;font-variant-numeric:tabular-nums}.muted{color:var(--mu)}
 </style></head><body><main>
 <h1>Alive Readme</h1><p class="sub">Make an animated README button in a few clicks. No coding needed. <a href="blocks.html" style="color:var(--ac)">Tables &amp; trees →</a></p>
-<div class="layout">
+<nav class="tabs" aria-label="Main sections"><button class="tab-btn" id="maker-tab-btn" type="button" aria-selected="true">Button maker</button><button class="tab-btn" id="views-tab-btn" type="button" aria-selected="false">Views</button></nav>
+<p class="analytics-note" id="analytics-note">Anonymous analytics uses a random ID saved in this browser, country, and referring website domain. No IP address or full referral URL is stored. <button id="analytics-toggle" type="button">Opt out</button></p>
+<section id="maker-tab"><div class="layout">
 <div>
   <section class="card"><h2><i>1</i> Start from a preset</h2><div class="chips" id="presets"></div></section>
   <section class="card"><h2><i>2</i> Make it yours</h2>
@@ -65,7 +69,8 @@ details{margin-top:12px}summary{cursor:pointer;color:var(--mu);font-size:.85rem}
     <label for="html">HTML</label><textarea id="html" readonly></textarea>
     <label for="url">Image URL only</label><textarea id="url" readonly></textarea>
     <label for="alt">Alt text (optional)</label><input id="alt" type="text"></details>
-</section></div></div></main>
+</section></div></div></section>
+<section id="views-tab" hidden><div class="card"><h2>Visitor overview</h2><div class="stats-grid"><div><div class="muted">Unique browsers</div><div class="stat-total" id="views-total">—</div><p class="note">One count per browser ID, approximately. Clearing browser storage creates a new ID.</p></div><div><div class="muted">Countries recorded</div><div class="stat-total" id="views-country-total">—</div><p class="note">Country is inferred by Cloudflare from the request location.</p></div></div><button class="primary" id="refresh-views" type="button">Refresh statistics</button><p class="note" id="views-status" role="status">Loading statistics…</p></div><div class="stats-grid"><div class="card"><h2>Visitors by country</h2><table class="stat-table"><thead><tr><th>Country</th><th>Unique browsers</th></tr></thead><tbody id="country-rows"><tr><td colspan="2" class="muted">Loading…</td></tr></tbody></table></div><div class="card"><h2>Referral sources</h2><table class="stat-table"><thead><tr><th>Source domain</th><th>Unique browsers</th></tr></thead><tbody id="source-rows"><tr><td colspan="2" class="muted">Loading…</td></tr></tbody></table></div></div></section></main>
 <script type="module">
 import { renderButton, toQuery, ICONS } from "./buttons/src/button-svg.js";
 const API_BASE = "https://alive-readme-buttons.spookyminecraftgamer.workers.dev";
@@ -119,7 +124,75 @@ function refresh() { drawIcons(); drawSegs(); update(); }
 $("presets").innerHTML = PRESETS.map(([n], i) => `<button type="button" class="chip" data-p="${i}">${n}</button>`).join("");
 $("presets").addEventListener("click", e => { const b = e.target.closest("[data-p]"); if (!b) return;
   Object.assign(S, { ipath: "", border: "", fg: "#ffffff", fill: "gradient", anim: "shine", style: "pill" }, PRESETS[b.dataset.p][1]);
-  syncInputs(); refresh(); });
+  syncInputs(); refresh();
+
+const ANALYTICS_OPT_OUT = "alive-readme-analytics-opt-out";
+const VISITOR_KEY = "alive-readme-visitor-id";
+const analyticsToggle = $("analytics-toggle");
+function updateAnalyticsPreference() {
+  const optedOut = localStorage.getItem(ANALYTICS_OPT_OUT) === "1";
+  analyticsToggle.textContent = optedOut ? "Opt in" : "Opt out";
+  $("analytics-note").firstChild.textContent = optedOut
+    ? "Anonymous analytics is disabled in this browser. "
+    : "Anonymous analytics uses a random ID saved in this browser, country, and referring website domain. No IP address or full referral URL is stored. ";
+}
+function visitorId() {
+  let id = localStorage.getItem(VISITOR_KEY);
+  if (!id) { id = crypto.randomUUID(); localStorage.setItem(VISITOR_KEY, id); }
+  return id;
+}
+async function sendVisit() {
+  if (localStorage.getItem(ANALYTICS_OPT_OUT) === "1") return;
+  try {
+    await fetch(API_BASE + "/api/track", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ visitorId: visitorId(), referrer: document.referrer }) });
+  } catch (error) { console.warn("Visitor analytics unavailable.", error); }
+}
+function fillTable(id, items, emptyText) {
+  const body = $(id); body.replaceChildren();
+  if (!items?.length) {
+    const tr = document.createElement("tr"), td = document.createElement("td");
+    td.colSpan = 2; td.className = "muted"; td.textContent = emptyText; tr.append(td); body.append(tr); return;
+  }
+  for (const item of items) {
+    const tr = document.createElement("tr"), name = document.createElement("td"), count = document.createElement("td");
+    name.textContent = item.name; count.textContent = item.count.toLocaleString(); tr.append(name, count); body.append(tr);
+  }
+}
+async function loadViews() {
+  $("views-status").textContent = "Loading statistics…";
+  try {
+    const response = await fetch(API_BASE + "/api/stats");
+    if (!response.ok) throw new Error("HTTP " + response.status);
+    const data = await response.json();
+    $("views-total").textContent = Number(data.total || 0).toLocaleString();
+    $("views-country-total").textContent = (data.countries || []).length.toLocaleString();
+    fillTable("country-rows", data.countries, "No visitor data yet.");
+    fillTable("source-rows", data.sources, "No referral data yet.");
+    $("views-status").textContent = "Statistics updated just now.";
+  } catch (error) {
+    $("views-status").textContent = "Could not load statistics. Check that the Worker has been deployed with its VIEWS KV binding.";
+    fillTable("country-rows", [], "Statistics unavailable."); fillTable("source-rows", [], "Statistics unavailable.");
+  }
+}
+function showTab(tab) {
+  const views = tab === "views"; $("maker-tab").hidden = views; $("views-tab").hidden = !views;
+  $("maker-tab-btn").setAttribute("aria-selected", String(!views));
+  $("views-tab-btn").setAttribute("aria-selected", String(views));
+  if (views) loadViews();
+}
+$("maker-tab-btn").addEventListener("click", () => showTab("maker"));
+$("views-tab-btn").addEventListener("click", () => showTab("views"));
+$("refresh-views").addEventListener("click", loadViews);
+analyticsToggle.addEventListener("click", () => {
+  if (localStorage.getItem(ANALYTICS_OPT_OUT) === "1") localStorage.removeItem(ANALYTICS_OPT_OUT);
+  else localStorage.setItem(ANALYTICS_OPT_OUT, "1");
+  updateAnalyticsPreference();
+  if (localStorage.getItem(ANALYTICS_OPT_OUT) !== "1") sendVisit();
+});
+updateAnalyticsPreference();
+sendVisit();
+ });
 $("icons").addEventListener("click", e => { const b = e.target.closest("[data-k]"); if (!b) return; S.icon = b.dataset.k; S.ipath = ""; $("ipath").value = ""; refresh(); });
 document.addEventListener("click", e => { const b = e.target.closest("[data-g]"); if (!b) return; S[b.dataset.g] = b.dataset.v; syncFg(); refresh(); });
 $("isearch").addEventListener("input", drawIcons);
