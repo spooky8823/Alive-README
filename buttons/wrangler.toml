@@ -2,3 +2,13 @@ name = "alive-readme-buttons"
 main = "src/index.js"
 compatibility_date = "2026-10-01"
 workers_dev = true
+
+[[kv_namespaces]]
+binding = "VIEWS"
+id = "871de8949df847d5b894bc386f08d554"
+
+# Cloudflare's PR preview build requires an explicit preview binding.
+# The Worker only accepts analytics requests from the production Pages origin.
+[[previews.kv_namespaces]]
+binding = "VIEWS"
+id = "871de8949df847d5b894bc386f08d554"

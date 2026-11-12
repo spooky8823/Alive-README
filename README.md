@@ -71,6 +71,12 @@ npx wrangler login
 npm run deploy
 ```
 
+## Visitor analytics
+
+The GitHub Pages site includes a **Views** tab with approximate unique-browser counts by country and referring website domain. It uses a random browser ID stored in local storage; the Worker hashes that ID before storing it. It does not store visitor IP addresses or full referral URLs. Visitors can opt out using the notice above the page tabs.
+
+The Worker uses the Cloudflare KV namespace bound as `VIEWS`. If you fork this project, create your own KV namespace and replace the namespace ID in `buttons/wrangler.toml` before deploying. KV is eventually consistent, so simultaneous first visits may occasionally be counted more than once. Clearing browser storage or using another browser/device creates another browser ID.
+
 ## How it works
 
 ![Tree](https://alive-readme-buttons.spookyminecraftgamer.workers.dev/tree.svg?data=Alive-Readme%2F%0A++index.html%0A++blocks.html++%0A++buttons%2F%0A++++src%2F%0A++++++button-svg.js%0A++++++brand-icons.js%0A++++++button-svj.js%0A++++++index.js%0A++++++table-svg.js%0A++++++tree-svg.js+%0A++++package.json%0A++++wrangler.toml%0A++README.md&theme=dark&folder=79c0ff)
